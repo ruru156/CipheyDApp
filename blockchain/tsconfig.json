@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "5.0",
+    "rootDir": "."
+  },
+  "include": ["./scripts", "./test", "./hardhat.config.ts", "./ignition"],
+  "exclude": ["node_modules"]
+}

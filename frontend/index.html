@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciphey DApp | Decentralized Decryption</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+    <!-- Navigation -->
+    <nav class="p-6 flex justify-between items-center border-b border-slate-800 mb-8">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-unlock-alt text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">Ciphey<span class="gradient-text italic">.eth</span></h1>
+        </div>
+        <div id="walletStatus" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700">
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <span class="text-sm font-medium text-slate-400">Not Connected</span>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-6">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-extrabold mb-4">Decentralized Automated Decryption</h2>
+            <p class="text-slate-400 text-lg">Unlock your Hidden Message Here!</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Input Section -->
+            <div class="md:col-span-2 space-y-6">
+                <div class="glass-card p-8 rounded-2xl shadow-xl">
+                    <label class="block text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Encrypted Input</label>
+                    <textarea id="inputText" rows="4" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-600"
+                        placeholder="Paste your encoded text here (e.g., SGVsbG8=)"></textarea>
+                    
+                    <div class="mt-6 flex justify-between items-center">
+                        <div class="flex space-x-4">
+                            <button onclick="process()" id="decryptBtn" class="btn-primary px-8 py-3 rounded-xl font-bold flex items-center space-x-2">
+                                <span>Decrypt & Store</span>
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                        </div>
+                        <div id="loader" class="hidden">
+                            <i class="fas fa-circle-notch fa-spin text-blue-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Section -->
+                <div id="resultCard" class="glass-card p-8 rounded-2xl shadow-xl hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-blue-400">Decryption Result</h3>
+                        <button onclick="copyResult()" class="text-slate-500 hover:text-slate-300 transition-colors">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="bg-slate-900 rounded-xl p-6 border border-slate-700">
+                        <p id="output" class="text-lg text-slate-200 leading-relaxed break-all"></p>
+                    </div>
+                    <div id="txInfo" class="mt-4 flex items-center space-x-2 text-xs text-green-500">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="txHash">Transaction stored on-chain</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar / Stats -->
+            <div class="space-y-6">
+                <div class="glass-card p-6 rounded-2xl">
+                    <h4 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Network Stats</h4>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Chain</span>
+                            <span class="font-mono text-sm">Hardhat (8545)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Total Records</span>
+                            <span id="totalRecords" class="font-mono text-sm">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl">
+                    <h4 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">System Status</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3 text-sm">
+                            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span>Ciphey Engine Online</span>
+                        </div>
+                        <div class="flex items-center space-x-3 text-sm">
+                            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span>Smart Contract Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="mt-12">
+            <h3 class="text-2xl font-bold mb-6">Recent Decryptions</h3>
+            <div id="historyContainer" class="grid grid-cols-1 gap-4">
+                <!-- History items will be injected here -->
+                <div class="text-slate-500 italic text-center py-8">No records found yet.</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+        const abi = [
+            "function storeResult(string,string)",
+            "function getCount() public view returns (uint256)",
+            "function records(uint256) public view returns (string,string,address,uint256)"
+        ];
+
+        let provider, signer, contract;
+
+        async function init() {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                const accounts = await provider.listAccounts();
+                if (accounts.length > 0) {
+                    updateWalletStatus(accounts[0]);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, abi, signer);
+                    updateStats();
+                }
+            }
+        }
+
+        function updateWalletStatus(address) {
+            const statusDiv = document.getElementById("walletStatus");
+            statusDiv.innerHTML = `
+                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                <span class="text-sm font-mono text-slate-200">${address.substring(0,6)}...${address.substring(38)}</span>
+            `;
+        }
+
+        async function updateStats() {
+            try {
+                const count = await contract.getCount();
+                document.getElementById("totalRecords").innerText = count.toString();
+                loadHistory(count);
+            } catch (e) {
+                console.error("Failed to update stats", e);
+            }
+        }
+
+        async function loadHistory(count) {
+            const container = document.getElementById("historyContainer");
+            if (count == 0) return;
+            
+            container.innerHTML = "";
+            const displayCount = Math.min(count, 5);
+            
+            for (let i = count - 1; i >= count - displayCount; i--) {
+                const record = await contract.records(i);
+                const item = document.createElement("div");
+                item.className = "glass-card p-5 rounded-xl border border-slate-800 flex justify-between items-center";
+                item.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-xs text-slate-500 mb-1">USER: ${record[2].substring(0,8)}...</div>
+                        <div class="font-mono text-sm text-slate-300 truncate max-w-xs">${record[0]}</div>
+                    </div>
+                    <div class="flex-1 text-center">
+                        <i class="fas fa-long-arrow-alt-right text-slate-600"></i>
+                    </div>
+                    <div class="flex-1 text-right">
+                        <div class="text-xs text-blue-500 mb-1">DECRYPTED</div>
+                        <div class="font-bold text-slate-200">${record[1]}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            }
+        }
+
+        async function process() {
+            const text = document.getElementById("inputText").value;
+            if (!text) return alert("Please enter text");
+
+            const btn = document.getElementById("decryptBtn");
+            const loader = document.getElementById("loader");
+            
+            try {
+                btn.disabled = true;
+                loader.classList.remove("hidden");
+
+                // 1. Call Backend
+                const res = await fetch("http://localhost:5000/decrypt", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({text})
+                });
+
+                const data = await res.json();
+                const decrypted = data.decrypted;
+
+                // 2. Update UI
+                document.getElementById("output").innerText = decrypted;
+                document.getElementById("resultCard").classList.remove("hidden");
+
+                // 3. Blockchain Storage
+                if (!window.ethereum) throw new Error("To store result, please install MetaMask");
+                
+                await window.ethereum.request({ method: "eth_requestAccounts" });
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                const contract = new ethers.Contract(contractAddress, abi, signer);
+
+                const tx = await contract.storeResult(text, decrypted);
+                document.getElementById("txHash").innerText = "Broadcasting to chain...";
+                
+                await tx.wait();
+                document.getElementById("txHash").innerText = `Stored: ${tx.hash.substring(0,10)}...`;
+                
+                updateWalletStatus(await signer.getAddress());
+                updateStats();
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                loader.classList.add("hidden");
+            }
+        }
+
+        function copyResult() {
+            const text = document.getElementById("output").innerText;
+            navigator.clipboard.writeText(text);
+            alert("Copied to clipboard!");
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
